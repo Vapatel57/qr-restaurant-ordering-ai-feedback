@@ -1,0 +1,34 @@
+.input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.menu-card:hover {
+    transform: translateY(-4px);
+    transition: 0.3s;
+}
+
+.sidebar-item:hover { background-color: #374151; }
+.active-nav { border-left: 4px solid #10b981; background-color: #374151; }
+
+.btn {
+    flex: 1;
+    border: 1px solid #ddd;
+    padding: 6px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.btn.danger {
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.filter-btn {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 6px 16px;
+    border-radius: 20px;
+}

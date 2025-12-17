@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bill | {{ restaurant_name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        @media print {
+            body { background: white; }
+            #print-actions { display: none; }
+        }
+        .bill-dashed {
+            border-bottom: 1px dashed #d1d5db;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 p-6">
+
+<div class="max-w-3xl mx-auto">
+
+    <!-- ACTIONS -->
+    <div id="print-actions" class="flex justify-end gap-3 mb-6">
+        <button onclick="window.print()"
+                class="bg-blue-600 text-white px-4 py-2 rounded font-bold">
+            <i class="fas fa-print"></i> Print
+        </button>
+
+        <a href="/bill/{{ order.id }}?pdf=1"
+           class="bg-red-600 text-white px-4 py-2 rounded font-bold">
+            <i class="fas fa-file-pdf"></i> PDF
+        </a>
+
+        <a href="/admin"
+           class="bg-gray-500 text-white px-4 py-2 rounded font-bold">
+            Back
+        </a>
+    </div>
+
+    <!-- BILL -->
+    <div class="bg-white p-8 rounded-xl shadow-xl">
+
+        <!-- HEADER -->
+        <div class="text-center border-b pb-4">
+            <h1 class="text-3xl font-black text-emerald-600">
+                {{ restaurant_name }}
+            </h1>
+            <p class="text-sm text-gray-600">GSTIN: Demo-GST-123</p>
+
+            <div class="mt-4 text-left inline-block text-sm">
+                <p><b>Table:</b> {{ order.table_no }}</p>
+                <p><b>Bill ID:</b> {{ order.id }}</p>
+                <p><b>Date:</b> {{ order.created_at }}</p>
+            </div>
+        </div>
+
+        <!-- ITEMS -->
+        <div class="mt-6 font-bold flex bill-dashed pb-2">
+            <span class="flex-1">Item</span>
+            <span class="w-16 text-center">Qty</span>
+            <span class="w-24 text-right">Total</span>
+        </div>
+
+        <div class="py-4 space-y-2">
+            {% for i in items %}
+            <div class="flex text-sm">
+                <span class="flex-1">{{ i.name }}</span>
+                <span class="w-16 text-center">{{ i.qty }}</span>
+                <span class="w-24 text-right">₹{{ i.price * i.qty }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- TOTAL -->
+        <div class="border-t pt-4 text-right space-y-1">
+            <p><b>Subtotal:</b> ₹{{ subtotal }}</p>
+            <p class="text-sm text-gray-600">GST (5%): ₹{{ gst }}</p>
+            <p class="text-xl font-black text-emerald-600">
+                Grand Total: ₹{{ total }}
+            </p>
+        </div>
+
+        <p class="text-center text-sm text-gray-500 mt-8">
+            Thank you for dining with us 🙏
+        </p>
+
+    </div>
+</div>
+
+</body>
+</html>

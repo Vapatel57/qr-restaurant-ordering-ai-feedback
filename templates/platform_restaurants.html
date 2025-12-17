@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Active Restaurants | Platform Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+<div class="p-8 max-w-7xl mx-auto">
+
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-black text-gray-800">
+            🍽️ Active Restaurants
+        </h1>
+
+        <span class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full font-bold">
+            Platform Owner
+        </span>
+    </div>
+
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 text-sm uppercase text-gray-500">
+                <tr>
+                    <th class="p-4">Restaurant</th>
+                    <th class="p-4">Subdomain</th>
+                    <th class="p-4">Orders</th>
+                    <th class="p-4">Revenue</th>
+                    <th class="p-4">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for r in restaurants %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 font-bold text-gray-800">
+                        {{ r.name }}
+                    </td>
+
+                    <td class="p-4 text-gray-600">
+                        {{ r.subdomain }}.yourdomain.com
+                    </td>
+
+                    <td class="p-4 font-semibold">
+                        {{ r.total_orders }}
+                    </td>
+
+                    <td class="p-4 font-bold text-emerald-600">
+                        ₹{{ r.total_revenue }}
+                    </td>
+
+                    <td class="p-4">
+                        <a href="/customer/{{ r.subdomain }}?table=1"
+                           target="_blank"
+                           class="text-sm bg-gray-900 text-white px-3 py-2 rounded hover:bg-gray-800">
+                            View
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>

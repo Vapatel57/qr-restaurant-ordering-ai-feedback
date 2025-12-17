@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Restaurant Account | QR-Order</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+<div class="bg-white w-full max-w-xl rounded-xl shadow-xl p-8">
+
+    <h2 class="text-2xl font-black text-center mb-6">
+        Create Restaurant Account
+    </h2>
+
+    <!-- ✅ ERROR MESSAGE -->
+    {% if error %}
+    <div class="bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm font-semibold">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" class="space-y-4">
+
+        <input name="restaurant_name" required
+               placeholder="Restaurant Name"
+               class="w-full border px-4 py-3 rounded-lg">
+
+        <input name="subdomain" required
+               placeholder="Subdomain (e.g. alexa)"
+               class="w-full border px-4 py-3 rounded-lg">
+
+        <input name="gstin"
+               placeholder="GSTIN (Optional)"
+               class="w-full border px-4 py-3 rounded-lg">
+
+        <input name="phone"
+               placeholder="Contact Number"
+               class="w-full border px-4 py-3 rounded-lg">
+
+        <textarea name="address" rows="3"
+                  placeholder="Restaurant Address"
+                  class="w-full border px-4 py-3 rounded-lg"></textarea>
+
+        <hr class="my-4">
+
+        <input name="email" type="email" required
+               placeholder="Admin Email"
+               class="w-full border px-4 py-3 rounded-lg">
+
+        <input name="password" type="password" required
+               placeholder="Password"
+               class="w-full border px-4 py-3 rounded-lg">
+
+        <button type="submit"
+                class="w-full bg-emerald-600 hover:bg-emerald-700
+                       text-white py-3 rounded-lg font-bold">
+            Create Account
+        </button>
+
+    </form>
+
+    <p class="text-center text-sm text-gray-500 mt-4">
+        Already have an account?
+        <a href="/login" class="text-emerald-600 font-semibold">Login</a>
+    </p>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Profile | QR-Order</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+<div class="flex h-screen overflow-hidden">
+
+    <!-- ✅ SIDEBAR -->
+    {% include "partials/admin_sidebar.html" %}
+
+    <!-- ✅ MAIN CONTENT -->
+    <main class="flex-1 overflow-y-auto">
+
+        <!-- HEADER -->
+        <header class="bg-white shadow-sm p-4">
+            <h2 class="text-xl font-bold text-gray-800">
+                Restaurant Profile
+            </h2>
+        </header>
+
+        <!-- CONTENT -->
+        <div class="p-6 max-w-4xl">
+
+            <div class="bg-white rounded-xl shadow p-6">
+
+                <h3 class="text-lg font-semibold mb-6">
+                    Restaurant Details
+                </h3>
+
+                <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- Restaurant Name -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">
+                            Restaurant Name
+                        </label>
+                        <input
+                            type="text"
+                            name="name"
+                            value="{{ restaurant.name }}"
+                            class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500"
+                            required
+                        >
+                    </div>
+
+                    <!-- GSTIN -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">
+                            GSTIN Number
+                        </label>
+                        <input
+                            type="text"
+                            name="gstin"
+                            value="{{ restaurant.gstin or '' }}"
+                            class="w-full border rounded-lg px-4 py-2"
+                        >
+                    </div>
+
+                    <!-- Phone -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">
+                            Contact Number
+                        </label>
+                        <input
+                            type="text"
+                            name="phone"
+                            value="{{ restaurant.phone or '' }}"
+                            class="w-full border rounded-lg px-4 py-2"
+                        >
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">
+                            Email
+                        </label>
+                        <input
+                            type="email"
+                            value="{{ session.user }}"
+                            disabled
+                            class="w-full border rounded-lg px-4 py-2 bg-gray-100"
+                        >
+                    </div>
+
+                    <!-- Address -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold mb-1">
+                            Restaurant Address
+                        </label>
+                        <textarea
+                            name="address"
+                            rows="3"
+                            class="w-full border rounded-lg px-4 py-2"
+                        >{{ restaurant.address or '' }}</textarea>
+                    </div>
+
+                    <!-- SAVE -->
+                    <div class="md:col-span-2 text-right">
+                        <button
+                            type="submit"
+                            class="bg-emerald-600 hover:bg-emerald-700
+                                   text-white px-6 py-3 rounded-lg font-bold">
+                            Save Changes
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+    </main>
+</div>
+
+</body>
+</html>
