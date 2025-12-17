@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Database (will use Railway volume)
+restaurant.db
+
+# Uploads
+static/uploads/
+static/qr/
+
+# Environment
+.env
+
+# OS
+.DS_Store

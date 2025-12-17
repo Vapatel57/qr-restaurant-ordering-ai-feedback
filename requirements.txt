@@ -1,2 +1,5 @@
-Flask==2.3.2
-qrcode[pil]
+Flask
+gunicorn
+qrcode
+reportlab
+flask-dance
