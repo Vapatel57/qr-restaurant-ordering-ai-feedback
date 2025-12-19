@@ -2,15 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Dashboard | QR Restaurant</title>
+    <title>Admin Dashboard | QR-Order</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
 <body class="bg-gray-100 font-sans">
@@ -27,22 +24,23 @@
             <a class="flex items-center py-3 px-6 bg-gray-700 border-l-4 border-emerald-500">
                 <i class="fas fa-chart-line mr-3"></i> Dashboard
             </a>
-            <a href="/menu" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+            <a href="/menu" class="flex items-center py-3 px-6 hover:bg-gray-800">
                 <i class="fas fa-hamburger mr-3"></i> Manage Menu
             </a>
-            <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+            <a href="/admin/qr" class="flex items-center py-3 px-6 hover:bg-gray-800">
                 <i class="fas fa-th-large mr-3"></i> Tables & QRs
             </a>
-            <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+            <a href="/admin/kitchen-users" class="flex items-center py-3 px-6 hover:bg-gray-800">
                 <i class="fas fa-utensils mr-3"></i> Kitchen Users
             </a>
-            <a href="/admin/profile" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+            <a href="/admin/profile" class="flex items-center py-3 px-6 hover:bg-gray-800">
                 <i class="fas fa-user mr-3"></i> Profile
             </a>
         </nav>
 
         <div class="p-4 border-t border-gray-800">
-            <a href="/logout" class="block w-full text-center bg-red-600 hover:bg-red-700 py-2 rounded-lg transition">
+            <a href="/logout"
+               class="block w-full text-center bg-red-600 hover:bg-red-700 py-2 rounded-lg">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
@@ -51,36 +49,39 @@
     <!-- MAIN -->
     <main class="flex-1 overflow-y-auto">
 
+        <!-- HEADER -->
         <header class="bg-white shadow-sm p-4 flex justify-between items-center">
-            <h2 class="text-xl font-semibold text-gray-800">Live Dashboard</h2>
-            <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
-                System Online
-            </span>
+            <h2 class="text-xl font-semibold">Live Dashboard</h2>
+
+            <button onclick="openHistory()"
+                    class="bg-gray-800 text-white px-4 py-2 rounded text-sm">
+                📅 Show Past Days Orders
+            </button>
         </header>
 
         <div class="p-6">
 
             <!-- STATS -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white p-6 rounded-xl shadow-sm">
-                    <p class="text-gray-500 text-sm uppercase font-bold">Orders</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <p class="text-gray-500 text-sm font-bold uppercase">Orders Today</p>
                     <h3 class="text-3xl font-bold" id="order-count">0</h3>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm">
-                    <p class="text-gray-500 text-sm uppercase font-bold">Pending</p>
+
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <p class="text-gray-500 text-sm font-bold uppercase">Pending</p>
                     <h3 class="text-3xl font-bold text-orange-500" id="pending-count">0</h3>
                 </div>
+
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <p class="text-gray-500 text-sm font-bold uppercase">Today Revenue</p>
+                    <h3 class="text-3xl font-bold text-emerald-600" id="today-revenue">₹0</h3>
+                </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm">
-    <p class="text-gray-500 text-sm uppercase font-bold">Today Revenue</p>
-    <h3 class="text-3xl font-bold text-emerald-600" id="today-revenue">₹0</h3>
-</div>
-
-
 
             <!-- ORDERS TABLE -->
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-5 border-b font-bold">Incoming Orders</div>
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <div class="p-5 border-b font-bold">Today's Orders</div>
 
                 <table class="w-full text-left">
                     <thead class="bg-gray-50 text-sm uppercase">
@@ -95,9 +96,60 @@
                     <tbody id="order-table-body"></tbody>
                 </table>
             </div>
-
         </div>
     </main>
+</div>
+
+<!-- ➕ ADD ITEM MODAL -->
+<div id="add-item-modal"
+     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+
+    <div class="bg-white p-6 rounded-xl w-full max-w-md">
+        <h3 class="text-lg font-bold mb-4">Add Item to Table</h3>
+
+        <select id="add-item-select"
+                class="w-full border p-2 rounded mb-3"></select>
+
+        <input id="add-item-qty"
+               type="number"
+               min="1"
+               value="1"
+               class="w-full border p-2 rounded mb-4">
+
+        <button onclick="confirmAddItem()"
+                class="w-full bg-emerald-600 text-white py-2 rounded font-bold">
+            Add to Order
+        </button>
+
+        <button onclick="closeAddItem()"
+                class="w-full mt-2 text-gray-500">
+            Cancel
+        </button>
+    </div>
+</div>
+
+<!-- PAST DAYS MODAL (unchanged) -->
+<div id="history-modal"
+     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+
+    <div class="bg-white p-6 rounded-xl w-full max-w-lg">
+        <h3 class="text-xl font-bold mb-4">Past Orders</h3>
+
+        <input type="date" id="history-date"
+               class="border p-2 rounded w-full mb-4">
+
+        <button onclick="loadHistory()"
+                class="bg-emerald-600 text-white px-4 py-2 rounded w-full">
+            Load Orders
+        </button>
+
+        <div id="history-result" class="mt-4 text-sm"></div>
+
+        <button onclick="closeHistory()"
+                class="mt-4 text-gray-500 underline w-full">
+            Close
+        </button>
+    </div>
 </div>
 
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>

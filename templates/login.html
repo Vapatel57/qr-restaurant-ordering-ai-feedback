@@ -14,6 +14,18 @@
   <div class="modal">
 
     <h2>Log in</h2>
+    {% if error %}
+<div style="
+    background:#fee2e2;
+    color:#991b1b;
+    padding:10px;
+    border-radius:10px;
+    margin-bottom:15px;
+    text-align:center;
+">
+    {{ error }}
+</div>
+{% endif %}
 
     <!-- GOOGLE LOGIN -->
     <a href="/login/google" class="google-btn">
@@ -38,9 +50,10 @@
       <!-- FORGOT PASSWORD -->
       <div style="text-align:right; margin-bottom:12px;">
         <a href="/forgot-password"
-           style="font-size:13px; color:#555; text-decoration:none;">
-          Forgot password?
-        </a>
+   style="display:block;text-align:right;font-size:13px;margin-bottom:10px;">
+   Forgot password?
+</a>
+
       </div>
 
       <button type="submit" class="primary-btn">Log in</button>

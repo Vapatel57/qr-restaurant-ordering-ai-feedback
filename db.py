@@ -2,7 +2,8 @@ import sqlite3
 import os
 from flask import g
 
-DB_PATH = os.getenv("DB_PATH", "/data/restaurant.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "restaurant.db")
 
 # ---------------- DB CONNECTION ----------------
 def get_db():
@@ -36,13 +37,13 @@ def init_db():
     # ================= RESTAURANTS =================
     c.execute("""
     CREATE TABLE IF NOT EXISTS restaurants (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    subdomain TEXT UNIQUE NOT NULL,
-    gstin TEXT,
-    address TEXT,
-    phone TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        subdomain TEXT UNIQUE NOT NULL,
+        gstin TEXT,
+        address TEXT,
+        phone TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
@@ -54,9 +55,7 @@ def init_db():
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         role TEXT NOT NULL,
-
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
     )
     """)
@@ -71,9 +70,7 @@ def init_db():
         category TEXT,
         image TEXT,
         available INTEGER DEFAULT 1,
-
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
     )
     """)
@@ -87,12 +84,32 @@ def init_db():
         items TEXT,
         total REAL,
         status TEXT DEFAULT 'Received',
-
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
     )
     """)
+
+    # ================= ORDER ADDITIONS (🔥 REQUIRED) =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS order_additions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id INTEGER NOT NULL,
+        restaurant_id INTEGER NOT NULL,
+        table_no INTEGER NOT NULL,
+        item_name TEXT NOT NULL,
+        qty INTEGER NOT NULL,
+        price REAL NOT NULL,
+        status TEXT DEFAULT 'New',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (order_id) REFERENCES orders(id),
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
+    )
+    """)
+
+    # ================= INDEXES (PERFORMANCE) =================
+    c.execute("CREATE INDEX IF NOT EXISTS idx_orders_restaurant ON orders(restaurant_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_additions_restaurant ON order_additions(restaurant_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_additions_status ON order_additions(status)")
 
     db.commit()
     db.close()

@@ -1,20 +1,21 @@
-const container = document.getElementById("orders-container");
+const ordersContainer = document.getElementById("orders-container");
+const additionsContainer = document.getElementById("additions");
 const pendingCount = document.getElementById("pending-count");
 
-// Prevent double clicks
+let lastOrders = [];
 const updatingOrders = new Set();
 
-// Cache last server state
-let lastOrders = [];
-
+/* ===============================
+   NORMAL ORDERS (FROM /events)
+================================ */
 function renderOrders(orders) {
-    container.innerHTML = "";
+    ordersContainer.innerHTML = "";
 
     const active = orders.filter(o => o.status !== "Served");
     pendingCount.innerText = active.length;
 
     if (active.length === 0) {
-        container.innerHTML = `
+        ordersContainer.innerHTML = `
             <div class="text-gray-400 text-xl">
                 No active orders 👨‍🍳
             </div>
@@ -27,50 +28,25 @@ function renderOrders(orders) {
             .map(i => `${i.qty} × ${i.name}`)
             .join("<br>");
 
-        const statusColor = {
-            "Received": "border-blue-500 text-blue-600 bg-blue-100",
-            "Preparing": "border-orange-500 text-orange-600 bg-orange-100",
-            "Ready": "border-green-500 text-green-600 bg-green-100"
-        }[o.status] || "border-gray-500";
-
         const nextStatus =
             o.status === "Received" ? "Preparing" :
             o.status === "Preparing" ? "Ready" :
             "Served";
 
-        const disabled = updatingOrders.has(o.id);
-
-        container.innerHTML += `
-            <div class="bg-white text-gray-900 w-80 rounded-xl shadow-xl
-                        border-t-8 ${statusColor.split(" ")[0]} flex flex-col">
-
-                <div class="p-4 border-b flex justify-between">
-                    <div>
-                        <h2 class="text-3xl font-black">TABLE ${o.table_no}</h2>
-                        <p class="text-xs text-gray-400">ORDER #${o.id}</p>
-                    </div>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor}">
-                        ${o.status}
-                    </span>
+        ordersContainer.innerHTML += `
+            <div class="bg-white text-gray-900 w-80 rounded-xl shadow-xl border-t-8 border-blue-500">
+                <div class="p-4 border-b">
+                    <h2 class="text-3xl font-black">TABLE ${o.table_no}</h2>
+                    <p class="text-xs text-gray-400">ORDER #${o.id}</p>
                 </div>
 
-                <div class="p-4 flex-1 text-sm">
-                    ${items}
-                </div>
+                <div class="p-4 text-sm">${items}</div>
 
                 <div class="p-4 bg-gray-50">
                     <button
-                        ${disabled ? "disabled" : ""}
                         onclick="updateStatus(${o.id}, '${nextStatus}')"
-                        class="w-full py-3 rounded-lg font-bold text-white transition
-                            ${disabled
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : nextStatus === "Preparing"
-                                ? "bg-orange-500 hover:bg-orange-600"
-                                : nextStatus === "Ready"
-                                ? "bg-green-600 hover:bg-green-700"
-                                : "bg-gray-700"}">
-                        ${disabled ? "Updating..." : `Mark as ${nextStatus}`}
+                        class="w-full py-3 rounded-lg font-bold text-white bg-emerald-600">
+                        Mark as ${nextStatus}
                     </button>
                 </div>
             </div>
@@ -78,39 +54,81 @@ function renderOrders(orders) {
     });
 }
 
+/* ===============================
+   ORDER STATUS UPDATE
+================================ */
 async function updateStatus(orderId, status) {
     if (updatingOrders.has(orderId)) return;
 
     updatingOrders.add(orderId);
-    renderOrders(lastOrders); // optimistic lock
 
-    try {
-        const res = await fetch(`/api/order/${orderId}/status`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status })
-        });
+    await fetch(`/api/order/${orderId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+    });
 
-        if (!res.ok) throw new Error("Failed");
-
-    } catch (err) {
-        alert("⚠️ Failed to update order");
-        updatingOrders.delete(orderId);
-        renderOrders(lastOrders);
-    }
+    updatingOrders.delete(orderId);
 }
 
-/* 🔴 LIVE SSE */
+/* ===============================
+   SSE – ONLY NORMAL ORDERS
+================================ */
 const source = new EventSource("/events");
 
 source.onmessage = (event) => {
     const data = JSON.parse(event.data);
-
-    lastOrders = data.orders;   // ✅ FIX
-    updatingOrders.clear();
+    lastOrders = data.orders;
     renderOrders(lastOrders);
 };
 
-source.onerror = () => {
-    console.warn("SSE disconnected. Retrying…");
-};
+/* ===============================
+   🔥 NEW ITEM ADDITIONS (POLLING)
+================================ */
+function loadAdditions() {
+    fetch("/api/kitchen/additions")
+        .then(res => res.json())
+        .then(additions => {
+            additionsContainer.innerHTML = "";
+
+            if (additions.length === 0) {
+                additionsContainer.innerHTML = `
+                    <p class="text-gray-400">No new additions</p>
+                `;
+                return;
+            }
+
+            additions.forEach(a => {
+                additionsContainer.innerHTML += `
+                    <div class="bg-red-600 text-white p-4 rounded-lg mb-3">
+                        <h3 class="font-black text-lg">
+                            TABLE ${a.table_no} – ADD ITEM
+                        </h3>
+                        <p class="text-sm mt-1">
+                            ${a.qty} × ${a.item_name}
+                        </p>
+
+                        <button
+                            onclick="markAdditionDone(${a.id})"
+                            class="mt-3 bg-black px-4 py-2 rounded text-sm">
+                            Mark Preparing
+                        </button>
+                    </div>
+                `;
+            });
+        });
+}
+
+function markAdditionDone(id) {
+    fetch(`/api/kitchen/addition/${id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Preparing" })
+    }).then(loadAdditions);
+}
+
+/* 🔁 Poll every 3 seconds */
+setInterval(loadAdditions, 3000);
+
+/* Initial load */
+loadAdditions();

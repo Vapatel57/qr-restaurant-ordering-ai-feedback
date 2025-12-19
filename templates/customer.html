@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
 </head>
 
 <body class="bg-gray-50 font-sans pb-24">
@@ -38,46 +39,23 @@
     </div>
 </header>
 
+<!-- SEARCH -->
+<div class="px-4 mt-4">
+    <input
+        id="search-input"
+        type="text"
+        placeholder="Search dishes..."
+        class="w-full px-4 py-3 rounded-xl border focus:ring-2
+               focus:ring-emerald-500 outline-none">
+</div>
+
+<!-- CATEGORY FILTER -->
+<div id="category-filters"
+     class="px-4 mt-4 flex gap-2 overflow-x-auto pb-2">
+</div>
+
 <!-- MENU -->
-<main class="px-4 space-y-4 mt-4" id="customer-menu">
-    {% for item in menu %}
-    <div class="bg-white p-3 rounded-2xl shadow-sm flex gap-4 border border-gray-50">
-        <img src="/{{ item.image }}"
-             class="w-24 h-24 rounded-xl object-cover">
-
-        <div class="flex-1 flex flex-col justify-between">
-            <div>
-                <h3 class="font-bold text-gray-800">{{ item.name }}</h3>
-                <p class="text-[10px] text-gray-400 uppercase">
-                    {{ item.category }}
-                </p>
-            </div>
-
-            <div class="flex justify-between items-center mt-2">
-                <span class="font-black text-emerald-600">
-                    ₹{{ item.price }}
-                </span>
-
-                <div class="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
-                    <button onclick="updateCart({{ item.id }}, -1)"
-                            class="w-7 h-7 bg-white shadow-sm rounded-md font-bold">
-                        −
-                    </button>
-
-                    <span id="qty-{{ item.id }}"
-                          class="text-sm font-bold">0</span>
-
-                    <button onclick="updateCart({{ item.id }}, 1)"
-                            class="w-7 h-7 bg-emerald-600 text-white
-                                   shadow-md rounded-md font-bold">
-                        +
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</main>
+<main class="px-4 space-y-4 mt-4" id="customer-menu"></main>
 
 <!-- CHECKOUT BAR -->
 <div id="checkout-bar"
@@ -97,22 +75,121 @@
 </div>
 
 <script>
-/* ---------- TABLE ---------- */
+/* ================== DATA ================== */
 const params = new URLSearchParams(window.location.search);
 const tableNo = params.get("table") || "NA";
 document.getElementById("display-table").innerText = "Table: " + tableNo;
 
-/* ---------- DATA ---------- */
 const restaurantId = {{ restaurant_id }};
 const menuData = {{ menu | tojson }};
 let cart = {};
+let selectedCategory = "All";
 
-/* ---------- CART ---------- */
+/* ================== RENDER MENU ================== */
+function renderMenu(items) {
+    const menuEl = document.getElementById("customer-menu");
+    menuEl.innerHTML = "";
+
+    if (items.length === 0) {
+        menuEl.innerHTML = `
+            <p class="text-center text-gray-400 mt-10">
+                No dishes found 🍽️
+            </p>`;
+        return;
+    }
+
+    items.forEach(item => {
+        menuEl.innerHTML += `
+            <div class="bg-white p-3 rounded-2xl shadow-sm flex gap-4 border">
+                <img src="/${item.image || 'static/no-image.png'}"
+                     class="w-24 h-24 rounded-xl object-cover">
+
+                <div class="flex-1 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-gray-800">${item.name}</h3>
+                        <p class="text-[10px] text-gray-400 uppercase">
+                            ${item.category}
+                        </p>
+                    </div>
+
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="font-black text-emerald-600">
+                            ₹${item.price}
+                        </span>
+
+                        <div class="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
+                            <button onclick="updateCart(${item.id}, -1)"
+                                    class="w-7 h-7 bg-white shadow-sm rounded-md font-bold">−</button>
+
+                            <span id="qty-${item.id}"
+                                  class="text-sm font-bold">${cart[item.id] || 0}</span>
+
+                            <button onclick="updateCart(${item.id}, 1)"
+                                    class="w-7 h-7 bg-emerald-600 text-white
+                                           shadow-md rounded-md font-bold">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+/* ================== SEARCH + FILTER ================== */
+function applyFilters() {
+    const query = document.getElementById("search-input").value.toLowerCase();
+
+    const filtered = menuData.filter(item => {
+        const matchName = item.name.toLowerCase().includes(query);
+        const matchCategory =
+            selectedCategory === "All" || item.category === selectedCategory;
+
+        return matchName && matchCategory;
+    });
+
+    renderMenu(filtered);
+}
+
+/* ================== CATEGORY BUTTONS ================== */
+function renderCategories() {
+    const container = document.getElementById("category-filters");
+    const categories = ["All", ...new Set(menuData.map(i => i.category))];
+
+    categories.forEach(cat => {
+        const btn = document.createElement("button");
+        btn.innerText = cat;
+        btn.className = `
+            px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap
+            ${cat === "All"
+                ? "bg-emerald-600 text-white"
+                : "bg-white border"}
+        `;
+
+        btn.onclick = () => {
+    selectedCategory = cat;
+
+    // reset all buttons
+    [...container.children].forEach(b => {
+        b.classList.remove("bg-emerald-600", "text-white");
+        b.classList.add("bg-white", "border", "text-gray-700");
+    });
+
+    // activate clicked button
+    btn.classList.remove("bg-white", "border", "text-gray-700");
+    btn.classList.add("bg-emerald-600", "text-white");
+
+    applyFilters();
+};
+
+        container.appendChild(btn);
+    });
+}
+
+/* ================== CART ================== */
 function updateCart(id, change) {
     cart[id] = (cart[id] || 0) + change;
     if (cart[id] < 0) cart[id] = 0;
-
-    document.getElementById(`qty-${id}`).innerText = cart[id];
+    applyFilters();
     calculateTotal();
 }
 
@@ -134,7 +211,7 @@ function calculateTotal() {
         .classList.toggle("hidden", total === 0);
 }
 
-/* ---------- PLACE ORDER ---------- */
+/* ================== PLACE ORDER ================== */
 function placeOrder() {
     const items = menuData
         .filter(i => cart[i.id])
@@ -151,15 +228,18 @@ function placeOrder() {
         body: JSON.stringify({
             restaurant_id: restaurantId,
             table: tableNo,
-            items: items
+            items
         })
-    })
-    .then(() => {
+    }).then(() => {
         alert("Order placed successfully 🍽️");
-        cart = {};
         location.reload();
     });
 }
+
+/* ================== INIT ================== */
+renderCategories();
+renderMenu(menuData);
+document.getElementById("search-input").addEventListener("input", applyFilters);
 </script>
 
 </body>

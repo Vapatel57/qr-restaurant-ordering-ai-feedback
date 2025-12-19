@@ -50,7 +50,18 @@
             <h1 class="text-3xl font-black text-emerald-600">
                 {{ restaurant_name }}
             </h1>
-            <p class="text-sm text-gray-600">GSTIN: Demo-GST-123</p>
+            <p class="text-sm text-gray-600">
+    GSTIN: <span class="font-semibold">{{ gstin or "NA" }}</span>
+</p>
+
+<p class="text-sm text-gray-600">
+    {{ address }}
+</p>
+
+<p class="text-sm text-gray-600">
+    Contact: {{ phone }}
+</p>
+
 
             <div class="mt-4 text-left inline-block text-sm">
                 <p><b>Table:</b> {{ order.table_no }}</p>

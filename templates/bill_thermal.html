@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Thermal Bill</title>
+
+<style>
+@page {
+    size: 58mm auto;
+    margin: 0;
+}
+body {
+    font-family: monospace;
+    font-size: 12px;
+    margin: 0;
+    padding: 8px;
+}
+.center { text-align: center; }
+.line { border-top: 1px dashed #000; margin: 6px 0; }
+.right { text-align: right; }
+</style>
+</head>
+
+<body onload="window.print()">
+
+<div class="center">
+    <strong>{{ order.name }}</strong><br>
+    {{ order.address }}<br>
+    Ph: {{ order.phone }}<br>
+    GSTIN: {{ order.gstin }}
+</div>
+
+<div class="line"></div>
+
+Table: {{ order.table_no }}<br>
+Date: {{ order.created_at }}
+
+<div class="line"></div>
+
+{% for i in items %}
+{{ i.name }}<br>
+{{ i.qty }} x {{ i.price }}
+<span class="right">{{ i.qty * i.price }}</span>
+<br>
+{% endfor %}
+
+<div class="line"></div>
+
+Subtotal: ₹{{ subtotal }}<br>
+CGST 2.5%: ₹{{ cgst }}<br>
+SGST 2.5%: ₹{{ sgst }}<br>
+
+<div class="line"></div>
+
+<strong>TOTAL: ₹{{ total }}</strong>
+
+<div class="line"></div>
+
+<div class="center">
+    Thank you!<br>
+    Visit again 🙏
+</div>
+<script>
+  window.onload = () => {
+      window.print();
+      setTimeout(() => window.close(), 500);
+  };
+</script>
+
+</body>
+</html>

@@ -9,7 +9,8 @@ import os, json, time, sqlite3, qrcode
 from zipfile import ZipFile
 from reportlab.pdfgen import canvas
 from flask_dance.contrib.google import make_google_blueprint
-
+from werkzeug.security import generate_password_hash, check_password_hash
+from menu_templates import MENU_TEMPLATES
 # --------------------------------------------------
 # CONFIG
 # --------------------------------------------------
@@ -46,9 +47,12 @@ app.register_blueprint(google_bp, url_prefix="/login")
 def login():
     if request.method == "POST":
         user = get_db().execute(
-            "SELECT * FROM users WHERE username=? AND password=?",
-            (request.form["username"], request.form["password"])
+            "SELECT * FROM users WHERE username=?",
+            (request.form["username"],)
         ).fetchone()
+
+        if not user or not check_password_hash(user["password"], request.form["password"]):
+            return render_template("login.html", error="Invalid email or password")
 
         if not user:
             return render_template(
@@ -70,9 +74,6 @@ def login():
     return render_template("login.html")
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
-    message = None
-    error = None
-
     if request.method == "POST":
         email = request.form["email"]
 
@@ -81,16 +82,18 @@ def forgot_password():
             (email,)
         ).fetchone()
 
-        if user:
-            message = "Password reset instructions sent (demo mode)"
-        else:
-            error = "No account found with this email"
+        if not user:
+            return render_template(
+                "forgot_password.html",
+                error="No account found with this email"
+            )
 
-    return render_template(
-        "forgot_password.html",
-        message=message,
-        error=error
-    )
+        return render_template(
+            "forgot_password.html",
+            success="Password reset link sent (demo mode)"
+        )
+
+    return render_template("forgot_password.html")
 
 
 @app.route("/signup", methods=["GET", "POST"])
@@ -98,8 +101,8 @@ def signup():
     db = get_db()
 
     if request.method == "POST":
-        email = request.form["email"]
-        subdomain = request.form["subdomain"]
+        email = request.form["email"].strip().lower()
+        subdomain = request.form["subdomain"].strip().lower()
 
         # 🔴 CHECK EMAIL
         if db.execute(
@@ -121,47 +124,52 @@ def signup():
                 error="This subdomain is already taken."
             )
 
-        # ✅ CREATE RESTAURANT
-        db.execute("""
-            INSERT INTO restaurants (name, subdomain, gstin, phone, address)
-            VALUES (?,?,?,?,?)
-        """, (
-            request.form["restaurant_name"],
-            subdomain,
-            request.form.get("gstin"),
-            request.form.get("phone"),
-            request.form.get("address")
-        ))
+        try:
+            # ✅ CREATE RESTAURANT
+            cursor = db.execute("""
+                INSERT INTO restaurants (name, subdomain, gstin, phone, address)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                request.form["restaurant_name"],
+                subdomain,
+                request.form.get("gstin"),
+                request.form.get("phone"),
+                request.form.get("address")
+            ))
 
-        restaurant_id = db.execute(
-            "SELECT id FROM restaurants WHERE subdomain=?",
-            (subdomain,)
-        ).fetchone()["id"]
+            restaurant_id = cursor.lastrowid  # ✅ SAFE
 
-        # ✅ CREATE ADMIN USER
-        db.execute("""
-            INSERT INTO users (restaurant_id, username, password, role)
-            VALUES (?,?,?,?)
-        """, (
-            restaurant_id,
-            email,
-            request.form["password"],
-            "admin"
-        ))
+            # ✅ CREATE ADMIN USER
+            hashed_pw = generate_password_hash(request.form["password"])
 
-        db.commit()
+            db.execute("""
+                INSERT INTO users (restaurant_id, username, password, role)
+                VALUES (?, ?, ?, ?)
+            """, (
+                restaurant_id,
+                email,
+                hashed_pw,
+                "admin"
+            ))
 
+            db.commit()
+
+        except Exception as e:
+            db.rollback()
+            return render_template(
+                "signup.html",
+                error="Something went wrong. Please try again."
+            )
+
+        # ✅ LOGIN USER
+        session.clear()
         session["user"] = email
         session["role"] = "admin"
         session["restaurant_id"] = restaurant_id
 
         return redirect("/admin")
 
-    # GET request
     return render_template("signup.html")
-
-
-
 
 
 @app.route("/logout")
@@ -194,6 +202,7 @@ def platform_restaurants():
 # --------------------------------------------------
 # CUSTOMER
 # --------------------------------------------------
+
 
 @app.route("/customer/<restaurant>")
 def customer(restaurant):
@@ -241,7 +250,6 @@ def place_order():
 
     get_db().commit()
     return jsonify({"success": True})
-
 # --------------------------------------------------
 # ADMIN & KITCHEN
 # --------------------------------------------------
@@ -251,12 +259,98 @@ def place_order():
 def admin():
     return render_template("admin.html")
 
+@app.route("/api/order/<int:order_id>/add-item", methods=["POST"])
+@login_required("admin")
+def add_item_to_order(order_id):
+    db = get_db()
+    data = request.json
 
+    qty = int(data["qty"])
+    item_id = data["item_id"]
+
+    # Fetch menu item
+    item = db.execute("""
+        SELECT name, price
+        FROM menu
+        WHERE id=? AND restaurant_id=?
+    """, (item_id, session["restaurant_id"])).fetchone()
+
+    # Fetch order
+    order = db.execute("""
+        SELECT items, total, table_no
+        FROM orders
+        WHERE id=? AND restaurant_id=?
+    """, (order_id, session["restaurant_id"])).fetchone()
+
+    items = json.loads(order["items"])
+
+    # Add to main order (for billing)
+    items.append({
+        "name": item["name"],
+        "price": item["price"],
+        "qty": qty
+    })
+
+    new_total = order["total"] + (item["price"] * qty)
+
+    db.execute("""
+        UPDATE orders
+        SET items=?, total=?
+        WHERE id=?
+    """, (json.dumps(items), new_total, order_id))
+
+    # 🔥 INSERT INTO order_additions (FOR KITCHEN)
+    db.execute("""
+    INSERT INTO order_additions
+    (order_id, restaurant_id, table_no, item_name, qty, price, status, created_at)
+    VALUES (?,?,?,?,?,?,'New',CURRENT_TIMESTAMP)
+""", (
+    order_id,
+    session["restaurant_id"],
+    order["table_no"],
+    item["name"],
+    qty,
+    item["price"]
+))
+
+
+    db.commit()
+    return jsonify({"success": True})
+
+# -----------------------
+#    KITCHEN
+# --------------------    
 
 @app.route("/kitchen")
 @login_required("kitchen")
 def kitchen():
     return render_template("kitchen.html")
+
+# 🔥 ONLY NEW ADDITIONS
+@app.route("/api/kitchen/additions")
+@login_required("kitchen")
+def kitchen_additions():
+    rows = get_db().execute("""
+        SELECT * FROM order_additions
+        WHERE restaurant_id=? AND status='New'
+        ORDER BY created_at ASC
+    """, (session["restaurant_id"],)).fetchall()
+
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/kitchen/addition/<int:id>/status", methods=["POST"])
+@login_required("kitchen")
+def update_addition_status(id):
+    get_db().execute("""
+        UPDATE order_additions
+        SET status='Preparing'
+        WHERE id=? AND restaurant_id=?
+    """, (id, session["restaurant_id"]))
+
+    get_db().commit()
+    return jsonify({"success": True})
+
 
 # ====== ADMIN PROFILE ========#
 @app.route("/admin/profile", methods=["GET", "POST"])
@@ -267,30 +361,66 @@ def admin_profile():
 
     if request.method == "POST":
         db.execute("""
-            UPDATE restaurants
-            SET name = ?, gstin = ?
-            WHERE id = ?
-        """, (
-            request.form["name"],
-            request.form["gstin"],
-            rid
-        ))
+    UPDATE restaurants
+    SET name = ?, gstin = ?, address = ?, phone = ?
+    WHERE id = ?
+""", (
+    request.form["name"],
+    request.form["gstin"],
+    request.form["address"],
+    request.form["phone"],
+    rid
+))
+
         db.commit()
 
         return redirect("/admin/profile")
 
-    restaurant = db.execute(
-        "SELECT name, gstin FROM restaurants WHERE id=?",
-        (rid,)
-    ).fetchone()
+    restaurant = db.execute("""
+    SELECT name, gstin, address, phone
+    FROM restaurants
+    WHERE id=?
+""", (rid,)).fetchone()
+
 
     return render_template(
         "admin_profile.html",
         restaurant=restaurant,
         email=session["user"]
     )
+@app.route("/admin/orders/by-date")
+@login_required("admin")
+def orders_by_date():
+    date = request.args.get("date")  # YYYY-MM-DD
+    rid = session["restaurant_id"]
 
-# ============ KITCHEN USERS =========== #
+    if not date:
+        return jsonify({"error": "Date required"}), 400
+
+    db = get_db()
+
+    orders = db.execute("""
+        SELECT *
+        FROM orders
+        WHERE restaurant_id=?
+        AND DATE(created_at)=?
+        ORDER BY id DESC
+    """, (rid, date)).fetchall()
+
+    revenue = db.execute("""
+        SELECT IFNULL(SUM(total),0)
+        FROM orders
+        WHERE restaurant_id=?
+        AND status='Served'
+        AND DATE(created_at)=?
+    """, (rid, date)).fetchone()[0]
+
+    return jsonify({
+        "orders": [dict(o) for o in orders],
+        "revenue": revenue,
+        "count": len(orders)
+    })
+
 
 # ================= KITCHEN USERS (ADMIN) =================
 
@@ -315,26 +445,38 @@ def kitchen_users():
 @login_required("admin")
 def create_kitchen_user():
     data = request.get_json()
-    print("KITCHEN USER PAYLOAD:", data)  # 🔥 DEBUG LINE
 
     if not data:
-        return jsonify({"error": "No JSON received"}), 400
+        return jsonify({"error": "No data"}), 400
 
-    email = data.get("email")
+    email = data.get("email").strip().lower()
     password = data.get("password")
 
     if not email or not password:
-        return jsonify({"error": "Email/password required"}), 400
+        return jsonify({"error": "Email & password required"}), 400
 
     db = get_db()
+
+    # ❗ Prevent duplicate user
+    if db.execute(
+        "SELECT id FROM users WHERE username=?",
+        (email,)
+    ).fetchone():
+        return jsonify({"error": "User already exists"}), 400
+
+    hashed_pw = generate_password_hash(password)
+
     db.execute("""
         INSERT INTO users (restaurant_id, username, password, role)
         VALUES (?, ?, ?, 'kitchen')
-    """, (session["restaurant_id"], email, password))
+    """, (
+        session["restaurant_id"],
+        email,
+        hashed_pw
+    ))
+
     db.commit()
-
     return jsonify({"success": True})
-
 
 @app.route("/api/kitchen-users/<int:user_id>", methods=["DELETE"])
 @login_required("admin")
@@ -420,6 +562,63 @@ def delete_menu(item_id):
     get_db().commit()
     return jsonify({"success": True})
 
+@app.route("/api/menu/import", methods=["POST"])
+@login_required("admin")
+def import_menu_template():
+    data = request.json
+    template = data.get("template")
+
+    if template not in MENU_TEMPLATES:
+        return jsonify({"error": "Invalid template"}), 400
+
+    db = get_db()
+    restaurant_id = session["restaurant_id"]
+
+    for name, category in MENU_TEMPLATES[template]:
+        db.execute("""
+            INSERT INTO menu (restaurant_id, name, price, category, image, available)
+            VALUES (?, ?, ?, ?, ?, 1)
+        """, (
+            restaurant_id,
+            name,
+            0,
+            category,
+            ""   # no image initially
+        ))
+
+    db.commit()
+    return jsonify({"success": True})
+@app.route("/api/menu/<int:item_id>", methods=["PUT"])
+@login_required("admin")
+def update_menu_item(item_id):
+    db = get_db()
+
+    name = request.form.get("name")
+    price = request.form.get("price")
+    category = request.form.get("category")
+    image = request.files.get("image")
+
+    if image:
+        filename = f"{int(time.time())}_{image.filename}"
+        path = os.path.join(UPLOAD_FOLDER, filename)
+        image.save(path)
+
+        db.execute("""
+            UPDATE menu
+            SET name=?, price=?, category=?, image=?
+            WHERE id=? AND restaurant_id=?
+        """, (name, price, category, path, item_id, session["restaurant_id"]))
+    else:
+        db.execute("""
+            UPDATE menu
+            SET name=?, price=?, category=?
+            WHERE id=? AND restaurant_id=?
+        """, (name, price, category, item_id, session["restaurant_id"]))
+
+    db.commit()
+    return jsonify({"success": True})
+
+
 # --------------------------------------------------
 # ORDER STATUS
 # --------------------------------------------------
@@ -503,11 +702,17 @@ def bill(order_id):
     db = get_db()
 
     order = db.execute("""
-        SELECT o.*, r.name AS restaurant_name
-        FROM orders o
-        JOIN restaurants r ON o.restaurant_id = r.id
-        WHERE o.id=? AND o.restaurant_id=?
-    """, (order_id, session["restaurant_id"])).fetchone()
+    SELECT 
+        o.*,
+        r.name AS restaurant_name,
+        r.gstin AS restaurant_gstin,
+        r.address AS restaurant_address,
+        r.phone AS restaurant_phone
+    FROM orders o
+    JOIN restaurants r ON o.restaurant_id = r.id
+    WHERE o.id=? AND o.restaurant_id=?
+""", (order_id, session["restaurant_id"])).fetchone()
+
 
     if not order:
         return "Order not found", 404
@@ -538,13 +743,48 @@ def bill(order_id):
         return send_file(filename, as_attachment=True)
 
     return render_template(
-        "bill.html",
+    "bill.html",
+    order=order,
+    items=items,
+    subtotal=subtotal,
+    gst=gst,
+    total=total,
+    restaurant_name=order["restaurant_name"],
+    gstin=order["restaurant_gstin"],
+    address=order["restaurant_address"],
+    phone=order["restaurant_phone"]
+)
+
+@app.route("/bill/<int:order_id>/thermal")
+@login_required("admin")
+def thermal_bill(order_id):
+    db = get_db()
+
+    order = db.execute("""
+        SELECT o.*, r.name, r.gstin, r.address, r.phone
+        FROM orders o
+        JOIN restaurants r ON o.restaurant_id = r.id
+        WHERE o.id=? AND o.restaurant_id=?
+    """, (order_id, session["restaurant_id"])).fetchone()
+
+    if not order:
+        return "Order not found", 404
+
+    items = json.loads(order["items"])
+
+    subtotal = sum(i["price"] * i["qty"] for i in items)
+    cgst = round(subtotal * 0.025, 2)
+    sgst = round(subtotal * 0.025, 2)
+    total = round(subtotal + cgst + sgst, 2)
+
+    return render_template(
+        "bill_thermal.html",
         order=order,
         items=items,
         subtotal=subtotal,
-        gst=gst,
-        total=total,
-        restaurant_name=order["restaurant_name"]
+        cgst=cgst,
+        sgst=sgst,
+        total=total
     )
 
 
@@ -562,27 +802,54 @@ def events():
             conn = sqlite3.connect("restaurant.db")
             conn.row_factory = sqlite3.Row
 
-            orders = conn.execute(
-                "SELECT * FROM orders WHERE restaurant_id=? ORDER BY id DESC",
-                (rid,)
-            ).fetchall()
+            orders = conn.execute("""
+                SELECT *
+                FROM orders
+                WHERE restaurant_id=?
+                AND DATE(created_at)=DATE('now')
+                ORDER BY id DESC
+            """, (rid,)).fetchall()
 
             revenue = conn.execute("""
-                SELECT IFNULL(SUM(total),0) AS revenue
+                SELECT IFNULL(SUM(total),0)
                 FROM orders
                 WHERE restaurant_id=?
                 AND status='Served'
-                AND created_at >= datetime('now','start of day','localtime')
-            """, (rid,)).fetchone()["revenue"]
+                AND DATE(created_at)=DATE('now')
+            """, (rid,)).fetchone()[0]
 
             conn.close()
 
-            payload = {
-                "orders": [dict(o) for o in orders],
-                "today_revenue": revenue
-            }
+            yield f"data:{json.dumps({
+                'orders': [dict(o) for o in orders],
+                'today_revenue': revenue
+            })}\n\n"
 
-            yield f"data:{json.dumps(payload)}\n\n"
+            time.sleep(2)
+
+    return Response(stream(), mimetype="text/event-stream")
+
+@app.route("/events/additions")
+@login_required("kitchen")
+def addition_events():
+    rid = session["restaurant_id"]
+
+    def stream():
+        while True:
+            conn = sqlite3.connect("restaurant.db")
+            conn.row_factory = sqlite3.Row
+
+            additions = conn.execute("""
+                SELECT *
+                FROM order_additions
+                WHERE restaurant_id=?
+                AND status='New'
+                ORDER BY created_at ASC
+            """, (rid,)).fetchall()
+
+            conn.close()
+
+            yield f"data:{json.dumps([dict(a) for a in additions])}\n\n"
             time.sleep(2)
 
     return Response(stream(), mimetype="text/event-stream")
@@ -597,6 +864,9 @@ def home():
 
 # --------------------------------------------------
 
+# if __name__ == "__main__":
+#     app.run(debug=True)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 

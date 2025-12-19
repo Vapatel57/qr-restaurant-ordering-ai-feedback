@@ -11,7 +11,6 @@
     <!-- FontAwesome -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
     <style>
         .sidebar-item:hover { background-color: #374151; }
         .active-nav { border-left: 4px solid #10b981; background-color: #374151; }
@@ -62,7 +61,7 @@
         <div class="flex justify-between mb-6">
             <h2 class="text-3xl font-bold">Menu Management</h2>
 
-            <button onclick="toggleModal()"
+            <button onclick="openAddModal()"
                     class="bg-emerald-600 text-white px-6 py-3 rounded">
                 <i class="fas fa-plus"></i> Add Dish
             </button>
@@ -75,6 +74,21 @@
             <button onclick="loadMenu('Main Course')" class="px-4 py-2 rounded bg-gray-200">Main Course</button>
             <button onclick="loadMenu('Beverages')" class="px-4 py-2 rounded bg-gray-200">Beverages</button>
         </div>
+        <!-- QUICK MENU TEMPLATE -->
+<div class="bg-white p-5 rounded-xl shadow mb-6">
+    <h3 class="font-bold text-lg mb-2">⚡ Quick Menu Templates</h3>
+    <p class="text-sm text-gray-500 mb-4">
+        Auto-add popular dishes. You can edit or delete them later.
+    </p>
+
+    <div class="flex flex-wrap gap-3">
+        <button onclick="importTemplate('punjabi')" class="template-btn">Punjabi</button>
+        <button onclick="importTemplate('gujarati')" class="template-btn">Gujarati</button>
+        <button onclick="importTemplate('south_indian')" class="template-btn">South Indian</button>
+        <button onclick="importTemplate('chinese')" class="template-btn">Chinese</button>
+        <button onclick="importTemplate('pizza')" class="template-btn">Pizza / Cafe</button>
+    </div>
+</div>
 
         <!-- GRID -->
         <div id="menu-grid"
@@ -85,13 +99,13 @@
 </div>
 
 <!-- ADD DISH MODAL -->
-<!-- MODAL -->
+
 <div id="item-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
   <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
 
     <!-- ❌ CLOSE BUTTON -->
-    <button onclick="toggleModal()"
+    <button onclick="closeAddModal()"
         class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold">
         &times;
     </button>
@@ -156,6 +170,95 @@
     </form>
   </div>
 </div>
+
+<!-- EDIT MODAL -->
+<div id="edit-modal"
+     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+
+    <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
+
+        <!-- CLOSE -->
+        <button onclick="closeEditModal()"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold">
+            &times;
+        </button>
+
+        <h3 class="text-xl font-bold mb-4">Edit Dish</h3>
+
+        <form id="edit-form" class="space-y-4">
+
+            <input type="hidden" id="edit-id">
+
+            <div>
+                <label class="text-sm font-semibold">Dish Name</label>
+                <input id="edit-name"
+                       type="text"
+                       class="w-full border p-3 rounded"
+                       required>
+            </div>
+
+            <div>
+                <label class="text-sm font-semibold">Category</label>
+                <select id="edit-category"
+                        class="w-full border p-3 rounded">
+                    <option>Starters</option>
+                    <option>Main Course</option>
+                    <option>Beverages</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="text-sm font-semibold">Price</label>
+                <input id="edit-price"
+                       type="number"
+                       class="w-full border p-3 rounded"
+                       required>
+            </div>
+
+            <div>
+                <label class="text-sm font-semibold">Dish Image</label>
+                <input id="edit-image"
+                       type="file"
+                       accept="image/*">
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700
+                           text-white py-3 rounded-xl font-bold">
+                Save Changes
+            </button>
+
+        </form>
+    </div>
+</div>
+<!-- ADD TO ORDER MODAL -->
+<div id="addToOrderModal"
+     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+
+  <div class="bg-white rounded-xl w-full max-w-sm p-6">
+    <h3 class="text-lg font-bold mb-2" id="modal-item-name"></h3>
+    <p class="text-sm text-gray-500 mb-4">Enter quantity</p>
+
+    <input type="number"
+           id="modal-qty"
+           min="1"
+           value="1"
+           class="w-full border rounded-lg px-4 py-2 mb-4">
+
+    <div class="flex justify-end gap-3">
+      <button onclick="closeAddToOrderModal()"
+              class="px-4 py-2 rounded text-gray-600">
+        Cancel
+      </button>
+
+      <button onclick="confirmAddToOrder()"
+              class="bg-emerald-600 text-white px-4 py-2 rounded-lg">
+        Add Item
+      </button>
+    </div>
+  </div>
+</div>
+
 
 
 <script src="{{ url_for('static', filename='js/menu.js') }}"></script>

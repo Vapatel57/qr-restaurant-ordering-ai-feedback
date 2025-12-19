@@ -39,84 +39,43 @@
                     Restaurant Details
                 </h3>
 
-                <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form method="POST" class="space-y-4 max-w-lg">
 
-                    <!-- Restaurant Name -->
-                    <div>
-                        <label class="block text-sm font-semibold mb-1">
-                            Restaurant Name
-                        </label>
-                        <input
-                            type="text"
-                            name="name"
-                            value="{{ restaurant.name }}"
-                            class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-emerald-500"
-                            required
-                        >
-                    </div>
+    <div>
+        <label class="text-sm font-semibold">Restaurant Name</label>
+        <input name="name"
+               value="{{ restaurant.name }}"
+               class="w-full border px-4 py-2 rounded"
+               required>
+    </div>
 
-                    <!-- GSTIN -->
-                    <div>
-                        <label class="block text-sm font-semibold mb-1">
-                            GSTIN Number
-                        </label>
-                        <input
-                            type="text"
-                            name="gstin"
-                            value="{{ restaurant.gstin or '' }}"
-                            class="w-full border rounded-lg px-4 py-2"
-                        >
-                    </div>
+    <div>
+        <label class="text-sm font-semibold">GSTIN</label>
+        <input name="gstin"
+               value="{{ restaurant.gstin }}"
+               class="w-full border px-4 py-2 rounded">
+    </div>
 
-                    <!-- Phone -->
-                    <div>
-                        <label class="block text-sm font-semibold mb-1">
-                            Contact Number
-                        </label>
-                        <input
-                            type="text"
-                            name="phone"
-                            value="{{ restaurant.phone or '' }}"
-                            class="w-full border rounded-lg px-4 py-2"
-                        >
-                    </div>
+    <div>
+        <label class="text-sm font-semibold">Contact Number</label>
+        <input name="phone"
+               value="{{ restaurant.phone }}"
+               class="w-full border px-4 py-2 rounded">
+    </div>
 
-                    <!-- Email -->
-                    <div>
-                        <label class="block text-sm font-semibold mb-1">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            value="{{ session.user }}"
-                            disabled
-                            class="w-full border rounded-lg px-4 py-2 bg-gray-100"
-                        >
-                    </div>
+    <div>
+        <label class="text-sm font-semibold">Address</label>
+        <textarea name="address"
+                  rows="3"
+                  class="w-full border px-4 py-2 rounded">{{ restaurant.address }}</textarea>
+    </div>
 
-                    <!-- Address -->
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold mb-1">
-                            Restaurant Address
-                        </label>
-                        <textarea
-                            name="address"
-                            rows="3"
-                            class="w-full border rounded-lg px-4 py-2"
-                        >{{ restaurant.address or '' }}</textarea>
-                    </div>
+    <button class="bg-emerald-600 text-white px-6 py-2 rounded font-bold">
+        Save Changes
+    </button>
 
-                    <!-- SAVE -->
-                    <div class="md:col-span-2 text-right">
-                        <button
-                            type="submit"
-                            class="bg-emerald-600 hover:bg-emerald-700
-                                   text-white px-6 py-3 rounded-lg font-bold">
-                            Save Changes
-                        </button>
-                    </div>
+</form>
 
-                </form>
 
             </div>
 

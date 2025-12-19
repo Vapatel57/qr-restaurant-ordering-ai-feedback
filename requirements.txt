@@ -1,5 +1,6 @@
-Flask
-gunicorn
-qrcode
-reportlab
-flask-dance
+Flask==2.3.3
+Werkzeug==2.3.7
+gunicorn==21.2.0
+qrcode==7.4.2
+reportlab==4.0.7
+Flask-Dance==7.0.0
